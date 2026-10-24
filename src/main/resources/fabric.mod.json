@@ -12,6 +12,9 @@
 	"entrypoints": {
 		"main": [
 			"re.jerome.tntarrow.TntArrowMod"
+		],
+		"client": [
+			"re.jerome.tntarrow.client.TntArrowClient"
 		]
 	},
 	"depends": {

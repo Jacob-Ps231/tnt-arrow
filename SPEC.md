@@ -5,7 +5,7 @@ Les instructions de travail permanentes sont dans `CLAUDE.md`, les pièges de la
 machine et de Minecraft 26.3 dans `../SETUP-MC-MODDING-26.3.md` (et le §1 de
 `../SETUP-MC-MODDING-26.2.md`).
 
-Statut : étape 1 validée et commitée (24/10/2026). Prochaine session : étape 2 (la flèche).
+Statut : étape 2 validée en jeu et relue (24/10/2026). Prochaine session : étape 3 (release).
 Dernière mise à jour : 24/10/2026.
 
 Conventions de ce fichier :
@@ -45,8 +45,10 @@ advancement qui se déclenche dès qu'on possède une TNT 🔷.
 ### 2.2 Tir ✅ / 🔷
 
 - Arc et arbalète ✅ : l'item rejoint le tag `#minecraft:arrows`, que les deux
-  armes lisent comme munitions. Tir multiple et perforation de l'arbalète :
-  comportement vanilla, sans code 🔷.
+  armes lisent comme munitions. Le type d'entité rejoint aussi le tag d'entité
+  `#minecraft:arrows`, que lisent Puissance, Frappe et l'advancement « Bien
+  visé ». Tir multiple : comportement vanilla, sans code 🔷. Perforation :
+  **neutralisée**, la flèche explose sur la première cible 🔷.
 - Distributeur 🔷 : tire la flèche comme une flèche normale (vérifié :
   `DispenserBlock.registerProjectileBehavior(ItemLike)` est public).
 - Onglet créatif 🔷 : **Combat**, juste après la flèche spectrale.
@@ -58,10 +60,11 @@ advancement qui se déclenche dès qu'on possède une TNT 🔷.
 | Déclenchement | **À l'impact**, sur un bloc comme sur une entité | ✅ |
 | Puissance | **4,0**, celle d'une TNT ; clé `explosion.power` | ✅ réglable en config |
 | Blocs | **Cassés**, comme une TNT (`ExplosionInteraction.TNT`) | ✅ |
-| Gamerule `tntExplodes` à `false` | La flèche ne fait **rien** : ni explosion, ni dégâts d'explosion 🔷 — elle disparaît | 🔷 |
+| Gamerule `tnt_explodes` à `false` | La flèche ne fait **rien** : ni explosion, ni dégâts d'explosion 🔷 — elle disparaît | 🔷 |
 | Feu | Non | 🔷 |
-| Dégâts de la flèche elle-même sur une entité | Gardés (dégâts vanilla de flèche), **puis** explosion | 🔷 |
-| Flèche ramassable | Non : elle n'existe plus après l'impact | ✅ (découle du déclenchement) |
+| Dégâts de la flèche elle-même sur une entité | Gardés (dégâts vanilla de flèche), **puis** explosion. Sur la cible touchée, ils ne s'additionnent pas : le coup de flèche arme l'invulnérabilité, l'explosion du même tick n'inflige que la différence, soit au total le plus fort des deux | 🔷 |
+| Bloc touché | Réagit comme à une flèche (bloc cible, cloche, fleur de chorus), avant l'explosion | ✅ 24/10/2026 |
+| Flèche ramassable | Non : elle n'existe plus après l'impact. **Limite acceptée** : une flèche qui apparaît déjà dans un bloc (distributeur collé à un mur, bloc tombé dessus) se plante sans impact, n'explose pas et reste ramassable | ✅ (limite acceptée 24/10/2026) |
 
 ⚠️ Vérifié au `javap` le 24/10/2026 : **c'est `PrimedTnt.explode` qui teste
 `GameRules.TNT_EXPLODES`**, pas `Level.explode` ni l'`ExplosionInteraction`.
@@ -153,17 +156,18 @@ Aucun mixin. Données là où c'est possible.
 | `TntArrowMod` | point d'entrée : config, enregistrements, distributeur, onglet créatif |
 | `TntArrowConfig` | lecture de `config/tntarrow.json` (§6) |
 | `TntArrowItem extends ArrowItem` | surcharge `createArrow` (arc, arbalète) et `asProjectile` (distributeur) pour rendre une `TntArrow` |
-| `TntArrow extends AbstractArrow` | `onHitEntity` → dégâts vanilla puis explosion ; `onHitBlock` → explosion ; `getDefaultPickupItem` → la flèche explosive |
+| `TntArrow extends AbstractArrow` | `onHitEntity` → dégâts vanilla puis explosion ; `onHitBlock` → réaction du bloc (`onProjectileHit`) puis explosion ; `getDefaultPickupItem` → la flèche explosive |
 | `client/TntArrowClient` | enregistre le renderer (`EntityRendererRegistry` de Fabric) |
 | `client/TntArrowRenderer extends ArrowRenderer` | ne fournit que la texture |
-| `data/minecraft/tags/item/arrows.json` | `"replace": false`, ajoute `tntarrow:tnt_arrow` |
+| `data/minecraft/tags/item/arrows.json` | `"replace": false`, ajoute l'item `tntarrow:tnt_arrow` (munition de l'arc et de l'arbalète) |
+| `data/minecraft/tags/entity_type/arrows.json` | `"replace": false`, ajoute le type d'entité (Puissance, Frappe, « Bien visé ») |
 | `data/tntarrow/recipe/tnt_arrow.json` | recette sans forme |
 | `data/tntarrow/advancement/recipes/combat/tnt_arrow.json` | déblocage de la recette |
 | `assets/tntarrow/…` | `items/`, `models/item/`, `textures/item/`, `textures/entity/projectiles/`, `lang/` |
+| `tools/GenerateTextures.java` | les deux textures, depuis celles de la flèche vanilla (§3) ; `java tools/GenerateTextures.java <minecraft-merged.jar>` |
 
-Enregistrement de l'entité : `EntityType.Builder.of(TntArrow::new,
-MobCategory.MISC).sized(0.5F, 0.5F).clientTrackingRange(4).updateInterval(20)`,
-valeurs de la flèche vanilla à relever.
+Enregistrement de l'entité : la chaîne exacte de `EntityTypes.ARROW`, relevée
+en §7.4.
 
 ### 7.4 À vérifier avant d'écrire du code
 
@@ -186,23 +190,55 @@ Déjà vérifié au `javap` sur `minecraft-merged.jar` 26.3, le 24/10/2026 :
 - ~~`EntityType.Builder`~~ : `of`, `sized`, `clientTrackingRange`, `updateInterval`,
   `build(ResourceKey)`.
 
-Reste à vérifier :
+Vérifié ensuite au `javap`, le 24/10/2026 (avant l'étape 2) :
 
-- [ ] Les valeurs de `EntityType.ARROW` (taille, portée, intervalle) — dans
-      `EntityTypes` en 26.3 (mémo 26.3 §9).
-- [ ] Le distributeur n'enregistre-t-il pas déjà tout `ProjectileItem` tout
-      seul ? (enregistrement au bootstrap, donc avant les items du mod.)
-- [ ] Le corps de `PrimedTnt.explode` : source de dégâts
-      (`Explosion.getDefaultDamageSource`), position (au centre ou `getY(0.0625)`),
-      pour reprendre le même appel.
-- [ ] Ordre dans `onHitEntity` : la flèche vanilla peut **rebondir** (cible
-      invulnérable, Enderman) sans être retirée — exploser quand même dans ce
-      cas. Lire le corps d'`AbstractArrow.onHitEntity`.
-- [ ] Sous l'eau : la TNT n'y casse pas de blocs, l'explosion le gère seule ?
-- [ ] Imputation : un mob tué par l'explosion est-il crédité au tireur
-      (`getOwner()`) ?
-- [ ] Format de l'advancement de recette en 26.3 : `"recipes"` (mémo 26.3 §7 d),
-      et l'id de recette doit exister (§9 f), sinon tout le datapack est refusé.
+- ~~Valeurs de `EntityTypes.ARROW`~~ (clé `EntityTypeIds.ARROW`) :
+  `Builder.of(…, MISC).noLootTable().sized(0.5F, 0.5F).eyeHeight(0.13F).clientTrackingRange(4).updateInterval(20)`.
+  Reprendre la même chaîne, `noLootTable()` et `eyeHeight` compris.
+- ~~Distributeur automatique ?~~ **Non** : `DispenseItemBehavior.bootStrap`
+  appelle `DispenserBlock.registerProjectileBehavior` **item par item**, en
+  dur. Le mod doit l'appeler pour son item.
+- ~~Corps de `PrimedTnt.explode`~~ : `if (level instanceof ServerLevel && gameRules.get(TNT_EXPLODES))`
+  puis `level.explode(this, Explosion.getDefaultDamageSource(level, this),
+  calculator /* null, sauf portail */, getX(), getY(0.0625), getZ(),
+  explosionPower, false, ExplosionInteraction.TNT)` — surcharge
+  `explode(Entity, DamageSource, ExplosionDamageCalculator, double, double, double, float, boolean, ExplosionInteraction)`.
+  Le `false` est le feu.
+- ~~Imputation~~ : **automatique**. `Explosion.getDefaultDamageSource` passe par
+  `getIndirectSourceEntity`, qui rend `Projectile.getOwner()` s'il est un
+  `LivingEntity` ; `DamageSources.explosion(source, owner)` donne alors
+  `PLAYER_EXPLOSION`. Passer la flèche comme source suffit.
+- ~~`AbstractArrow.onHitEntity`~~ : appelle `Projectile.onHitEntity`, calcule
+  les dégâts, puis `hurtOrSimulate`. Deux sorties sans retrait de l'entité à
+  connaître : le **rebond** (dégâts refusés : cible invulnérable ou en créatif,
+  bouclier qui bloque tout ; l'Enderman, lui, n'est pas un rebond, la flèche
+  vanilla le traverse) et
+  la **perforation** (`getPierceLevel() > 0`, la flèche traverse et continue).
+  Il y a aussi un `discard` + `return` anticipé quand la liste de perforation
+  est pleine. → Dans la flèche explosive : `super.onHitEntity` **puis**
+  explosion **inconditionnelle** (côté serveur), puis `discard`. Garde contre la
+  double explosion : ne rien faire si `isRemoved()`, testé **avant** `super` —
+  après, il serait toujours vrai sur un coup normal, que `super` termine par
+  `discard`. (La boucle `stepMoveAndHit` teste déjà `isAlive()` avant chaque
+  impact : la garde double cette protection.)
+  ⚠️ `onHitEntity` fait aussi `setArrowCount(+1)` sur une cible vivante : un
+  joueur touché garde une flèche **vanilla** plantée dans le corps (rendu
+  vanilla des flèches plantées). Accepté 🔷, c'est cosmétique.
+- ~~`AbstractArrow.onHitBlock`~~ : stocke `lastState`, effets d'enchantement,
+  recule la flèche, joue le son, passe en `inGround`. → Dans la flèche
+  explosive : sans `super` (la flèche ne doit pas se planter), mais avec la part
+  de `Projectile.onHitBlock`, `state.onProjectileHit(level, state, hit, this)`,
+  pour que le bloc réagisse (cible, cloche) ; puis explosion ✅. Les effets
+  d'enchantement `hit_block` sont sautés.
+- ~~Sous l'eau~~ : **automatique**. `ServerExplosion` lit le `FluidState` de
+  chaque position du rayon et sa résistance passe par
+  `ExplosionDamageCalculator.getBlockExplosionResistance(…, BlockState, FluidState)` :
+  l'eau (résistance 100) protège les blocs comme pour une TNT.
+- ~~Format de l'advancement~~ (`recipes/combat/spectral_arrow.json` du jar
+  26.3) : `"parent": "minecraft:recipes/root"`, critères `inventory_changed`
+  (`"items": [{"items": "minecraft:tnt"}]`) et `recipe_unlocked` avec
+  **`"recipes"`** (pluriel), `requirements` en OU, `rewards.recipes`. L'id
+  `tntarrow:tnt_arrow` doit exister dans `data/tntarrow/recipe/`.
 
 ---
 
@@ -215,7 +251,7 @@ obligatoires de `CLAUDE.md`.
 | # | Étape | Contenu | Validé quand | État |
 | --- | --- | --- | --- | --- |
 | 1 | Squelette | git, wrapper Gradle, `fabric.mod.json`, licence, `.gitattributes`, `.gitignore`, config (§6) lue au démarrage | le jeu se lance avec le mod listé, sans crash ; `config/tntarrow.json` apparaît | ✅ validée 24/10/2026 |
-| 2 | La flèche | item, entité, explosion, recette, advancement, tag, distributeur, onglet, textures par script, renderer, traductions | voir ci-dessous | |
+| 2 | La flèche | item, entité, explosion, recette, advancement, tag, distributeur, onglet, textures par script, renderer, traductions | voir ci-dessous | ✅ validée 24/10/2026 |
 | 3 | Release | README (page Modrinth), version, tag, jar dans `_Publiés` | Jérôme a le jar dans son instance | |
 
 « Validé quand » de l'étape 2, joué par Jérôme :
@@ -228,7 +264,7 @@ obligatoires de `CLAUDE.md`.
 4. Tir à l'arbalète, et à l'arbalète Tir multiple : 3 explosions, 1 flèche
    consommée.
 5. Distributeur alimenté par un bouton : il tire, ça explose.
-6. `/gamerule tntExplodes false` : la flèche ne casse rien et ne blesse pas
+6. `/gamerule tnt_explodes false` : la flèche ne casse rien et ne blesse pas
    d'explosion.
 7. `explosion.power` à 1 dans la config, relance : petite explosion.
 8. Flèche en vol au moment d'un « Sauvegarder et quitter » (tir vers le ciel),
@@ -255,5 +291,7 @@ obligatoires de `CLAUDE.md`.
 
 | Date | Décision |
 | --- | --- |
-| 24/10/2026 | Spec écrite. Jérôme a tranché les questions 1 à 4. Les vérifications de §7.4 ont montré que le test de la gamerule `tntExplodes` est dans `PrimedTnt`, pas dans `Level.explode` : à reproduire dans la flèche. Fabric loader 0.20.1 découvert, stable, non adopté (§7.2). |
+| 24/10/2026 | Spec écrite. Jérôme a tranché les questions 1 à 4. Les vérifications de §7.4 ont montré que le test de la gamerule `tnt_explodes` est dans `PrimedTnt`, pas dans `Level.explode` : à reproduire dans la flèche. Fabric loader 0.20.1 découvert, stable, non adopté (§7.2). |
 | 24/10/2026 | Étape 1 codée. Copié de Smart Chest : `build.gradle` (sans access widener), `settings.gradle`, `gradle.properties`, `.gitattributes`, `LICENSE`, wrapper (déjà Gradle 9.6.0), et le patron de `SmartChestConfig` (deux codecs, `_comment`, fichier jamais réécrit). Fabric API 0.165.0+26.3 déclare `fabricloader >=0.19.3` : le loader 0.19.5 convient, le 0.20.1 reste inutile. `GSON` de la config avec `disableHtmlEscaping()` : sans cela, l'apostrophe du `_comment` s'écrit `'` dans un fichier fait pour être lu à la main (Smart Chest a le même défaut). `runServer` demande d'abord `run/eula.txt` à `eula=true` (accord de Jérôme du 24/10/2026, dossier `run/` non suivi). Le bruit de log hors-ligne du client (authlib 401, Realms, Perflib) n'a rien à voir avec le mod. |
+| 24/10/2026 | Étape 2 codée : `TntArrowItem`, `TntArrow`, enregistrements dans `TntArrowMod` (champs statiques : item puis type d'entité ; distributeur et onglet dans `onInitialize`), `client/TntArrowClient` et `TntArrowRenderer`, données et textures. **Révélé faux** : la gamerule s'appelle **`tnt_explodes`** en 26.3 (ids en snake_case), pas `tntExplodes` — corrigé en §2.3 et §8. **Piège évité** : la garde `isRemoved()` contre la double explosion, placée après `super.onHitEntity`, aurait supprimé l'explosion de tout coup normal (`super` y finit par `discard`) ; elle est avant (§7.4). `EntityRendererRegistry` de Fabric est déprécié sans remplaçant (`EntityRenderers.register` privé, aucun access widener) : gardé, comme `BlockEntityRendererRegistry` dans Smart Chest. Textures : la pointe grise de la flèche vanilla recolorée avec les quatre rouges de `tnt_side.png` selon sa luminosité, une bande blanche en travers (diagonale sur l'item, une colonne par face sur l'entité). `runServer` exercé après `Done` par des commandes : flèche invoquée au-dessus d'un mur de terre → mur percé et flèche retirée ; `tnt_explodes` à `false` → mur intact et flèche retirée ; flèche en vol (`NoGravity`) sauvegardée par `save-all flush` sans erreur. Laissé à la relecture : une flèche **renvoyée** (rebond) presque à l'arrêt lâche son item (`pickup` `ALLOWED`) dans `super`, puis explose ; l'explosion détruit normalement l'item lâché. |
+| 24/10/2026 | Étape 2 validée en jeu par Jérôme (9 gestes). Relecture Opus : ni double explosion, ni fuite côté client, ni duplication. **Manque trouvé** : le tag d'**entité** `#minecraft:arrows`, que lisent Puissance et Frappe (sur l'attaquant direct) ; sans lui, un arc Puissance V n'augmentait pas les dégâts de flèche → ajouté. **Révélé faux** : l'Enderman n'est pas un rebond (la flèche vanilla le traverse) ; la perforation n'est pas vanilla mais neutralisée ; les dégâts de flèche et d'explosion ne s'additionnent pas sur la cible (invulnérabilité de 20 ticks). Décisions de Jérôme : le bloc touché réagit comme à une flèche (`onProjectileHit` avant l'explosion, vérifié par `runServer` : un bloc cible émet son signal avec `tnt_explodes` à `false`) ; une flèche qui apparaît déjà dans un bloc reste plantée sans exploser (limite acceptée, §2.3). Le rebond quasi à l'arrêt qui lâche l'item : l'explosion le détruit ; avec `tnt_explodes` à `false` l'item survit, sans duplication. Clé d'onglet Combat : reconstruite, bien que Fabric API la rende accessible (mémo 26.3 §11). |
