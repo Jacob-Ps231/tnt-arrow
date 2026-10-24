@@ -5,7 +5,7 @@ Les instructions de travail permanentes sont dans `CLAUDE.md`, les pièges de la
 machine et de Minecraft 26.3 dans `../SETUP-MC-MODDING-26.3.md` (et le §1 de
 `../SETUP-MC-MODDING-26.2.md`).
 
-Statut : étape 1 codée, en attente de validation en jeu. Prochaine session : étape 2 (la flèche).
+Statut : étape 1 validée et commitée (24/10/2026). Prochaine session : étape 2 (la flèche).
 Dernière mise à jour : 24/10/2026.
 
 Conventions de ce fichier :
@@ -214,7 +214,7 @@ obligatoires de `CLAUDE.md`.
 
 | # | Étape | Contenu | Validé quand | État |
 | --- | --- | --- | --- | --- |
-| 1 | Squelette | git, wrapper Gradle, `fabric.mod.json`, licence, `.gitattributes`, `.gitignore`, config (§6) lue au démarrage | le jeu se lance avec le mod listé, sans crash ; `config/tntarrow.json` apparaît | ✅ codée, validation de Jérôme en attente |
+| 1 | Squelette | git, wrapper Gradle, `fabric.mod.json`, licence, `.gitattributes`, `.gitignore`, config (§6) lue au démarrage | le jeu se lance avec le mod listé, sans crash ; `config/tntarrow.json` apparaît | ✅ validée 24/10/2026 |
 | 2 | La flèche | item, entité, explosion, recette, advancement, tag, distributeur, onglet, textures par script, renderer, traductions | voir ci-dessous | |
 | 3 | Release | README (page Modrinth), version, tag, jar dans `_Publiés` | Jérôme a le jar dans son instance | |
 
