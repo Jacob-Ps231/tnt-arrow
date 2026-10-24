@@ -1,0 +1,23 @@
+{
+	"schemaVersion": 1,
+	"id": "tntarrow",
+	"version": "${version}",
+	"name": "TNT Arrow",
+	"description": "An explosive arrow: craft an arrow with a block of TNT, and it explodes like TNT on impact.",
+	"authors": [
+		"Jerome"
+	],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"re.jerome.tntarrow.TntArrowMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
