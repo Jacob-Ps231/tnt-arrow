@@ -5,7 +5,7 @@ Les instructions de travail permanentes sont dans `CLAUDE.md`, les pièges de la
 machine et de Minecraft 26.3 dans `../SETUP-MC-MODDING-26.3.md` (et le §1 de
 `../SETUP-MC-MODDING-26.2.md`).
 
-Statut : étape 2 validée en jeu et relue (24/10/2026). Prochaine session : étape 3 (release).
+Statut : étape 2 validée en jeu et relue (24/10/2026). Étape 3 (release) en cours : README, icône et liens écrits, tag et publication en attente du feu vert de Jérôme.
 Dernière mise à jour : 24/10/2026.
 
 Conventions de ce fichier :
@@ -252,7 +252,7 @@ obligatoires de `CLAUDE.md`.
 | --- | --- | --- | --- | --- |
 | 1 | Squelette | git, wrapper Gradle, `fabric.mod.json`, licence, `.gitattributes`, `.gitignore`, config (§6) lue au démarrage | le jeu se lance avec le mod listé, sans crash ; `config/tntarrow.json` apparaît | ✅ validée 24/10/2026 |
 | 2 | La flèche | item, entité, explosion, recette, advancement, tag, distributeur, onglet, textures par script, renderer, traductions | voir ci-dessous | ✅ validée 24/10/2026 |
-| 3 | Release | README (page Modrinth), version, tag, jar dans `_Publiés` | Jérôme a le jar dans son instance | |
+| 3 | Release | README (page Modrinth), icône, liens `contact`, version, tag, jar dans `_Publiés` | Jérôme a le jar dans son instance | 🔶 README, icône et liens commités ; tag et publication à venir |
 
 « Validé quand » de l'étape 2, joué par Jérôme :
 
@@ -283,7 +283,7 @@ obligatoires de `CLAUDE.md`.
 | 2 | ~~Casse les blocs ?~~ — 24/10/2026 : **oui, comme la TNT**. | §2.3 |
 | 3 | ~~Déclenchement~~ — 24/10/2026 : **à l'impact**. | §2.3 |
 | 4 | ~~Recette~~ — 24/10/2026 : **1 flèche + 1 TNT → 1**. | §2.1 |
-| 5 | Dépôt GitHub public `Jacob-Ps231/tnt-arrow` et page Modrinth, comme les autres mods ? | §8 étape 3 |
+| 5 | ~~Publication~~ — 24/10/2026 : **dépôt GitHub public `Jacob-Ps231/tnt-arrow`, release GitHub et page Modrinth faite à la main**, comme les autres mods. Chaque action publique (création du dépôt, tag, push, release) attend un accord explicite dans la session qui l'exécute. | §8 étape 3 |
 
 ---
 
@@ -295,3 +295,4 @@ obligatoires de `CLAUDE.md`.
 | 24/10/2026 | Étape 1 codée. Copié de Smart Chest : `build.gradle` (sans access widener), `settings.gradle`, `gradle.properties`, `.gitattributes`, `LICENSE`, wrapper (déjà Gradle 9.6.0), et le patron de `SmartChestConfig` (deux codecs, `_comment`, fichier jamais réécrit). Fabric API 0.165.0+26.3 déclare `fabricloader >=0.19.3` : le loader 0.19.5 convient, le 0.20.1 reste inutile. `GSON` de la config avec `disableHtmlEscaping()` : sans cela, l'apostrophe du `_comment` s'écrit `'` dans un fichier fait pour être lu à la main (Smart Chest a le même défaut). `runServer` demande d'abord `run/eula.txt` à `eula=true` (accord de Jérôme du 24/10/2026, dossier `run/` non suivi). Le bruit de log hors-ligne du client (authlib 401, Realms, Perflib) n'a rien à voir avec le mod. |
 | 24/10/2026 | Étape 2 codée : `TntArrowItem`, `TntArrow`, enregistrements dans `TntArrowMod` (champs statiques : item puis type d'entité ; distributeur et onglet dans `onInitialize`), `client/TntArrowClient` et `TntArrowRenderer`, données et textures. **Révélé faux** : la gamerule s'appelle **`tnt_explodes`** en 26.3 (ids en snake_case), pas `tntExplodes` — corrigé en §2.3 et §8. **Piège évité** : la garde `isRemoved()` contre la double explosion, placée après `super.onHitEntity`, aurait supprimé l'explosion de tout coup normal (`super` y finit par `discard`) ; elle est avant (§7.4). `EntityRendererRegistry` de Fabric est déprécié sans remplaçant (`EntityRenderers.register` privé, aucun access widener) : gardé, comme `BlockEntityRendererRegistry` dans Smart Chest. Textures : la pointe grise de la flèche vanilla recolorée avec les quatre rouges de `tnt_side.png` selon sa luminosité, une bande blanche en travers (diagonale sur l'item, une colonne par face sur l'entité). `runServer` exercé après `Done` par des commandes : flèche invoquée au-dessus d'un mur de terre → mur percé et flèche retirée ; `tnt_explodes` à `false` → mur intact et flèche retirée ; flèche en vol (`NoGravity`) sauvegardée par `save-all flush` sans erreur. Laissé à la relecture : une flèche **renvoyée** (rebond) presque à l'arrêt lâche son item (`pickup` `ALLOWED`) dans `super`, puis explose ; l'explosion détruit normalement l'item lâché. |
 | 24/10/2026 | Étape 2 validée en jeu par Jérôme (9 gestes). Relecture Opus : ni double explosion, ni fuite côté client, ni duplication. **Manque trouvé** : le tag d'**entité** `#minecraft:arrows`, que lisent Puissance et Frappe (sur l'attaquant direct) ; sans lui, un arc Puissance V n'augmentait pas les dégâts de flèche → ajouté. **Révélé faux** : l'Enderman n'est pas un rebond (la flèche vanilla le traverse) ; la perforation n'est pas vanilla mais neutralisée ; les dégâts de flèche et d'explosion ne s'additionnent pas sur la cible (invulnérabilité de 20 ticks). Décisions de Jérôme : le bloc touché réagit comme à une flèche (`onProjectileHit` avant l'explosion, vérifié par `runServer` : un bloc cible émet son signal avec `tnt_explodes` à `false`) ; une flèche qui apparaît déjà dans un bloc reste plantée sans exploser (limite acceptée, §2.3). Le rebond quasi à l'arrêt qui lâche l'item : l'explosion le détruit ; avec `tnt_explodes` à `false` l'item survit, sans duplication. Clé d'onglet Combat : reconstruite, bien que Fabric API la rende accessible (mémo 26.3 §11). |
+| 24/10/2026 | Étape 3 préparée. `README.md` écrit d'après le code et les données, pas de mémoire : **Infinité ne s'applique pas** (`infinity.json` ne vise que `minecraft:arrow` via `match_tool` : la flèche explosive est toujours consommée) ; l'advancement « Bien visé » s'appelle *Take Aim* en anglais (pas *Sniper Duel*) ; kills crédités au tireur via `Explosion.getDefaultDamageSource`. Icône : capture « craft » de Jérôme (flèche et TNT dans la grille 2×2), recadrée en carré 112×112 et agrandie ×4 au plus proche voisin (448×448) ; source gardée dans `ref/` (non suivi). Liens `contact` et `icon` ajoutés à `fabric.mod.json`. `clean build` vert, jar vérifié (classes main et client, assets, données, icône, licence ; ni `tools/` ni PNG de travail). |

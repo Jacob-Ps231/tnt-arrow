@@ -7,7 +7,13 @@
 	"authors": [
 		"Jerome"
 	],
+	"contact": {
+		"homepage": "https://github.com/Jacob-Ps231/tnt-arrow",
+		"sources": "https://github.com/Jacob-Ps231/tnt-arrow",
+		"issues": "https://github.com/Jacob-Ps231/tnt-arrow/issues"
+	},
 	"license": "MIT",
+	"icon": "assets/tntarrow/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
